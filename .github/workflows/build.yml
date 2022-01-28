@@ -18,9 +18,9 @@ jobs:
         run: git fetch --prune --unshallow
       - name: Set env from tag
         run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
-        if: startsWith(github.ref, '/refs/heads/') == false
+        if: ${{ ! github.event.workflow_dispatch }}
       - name: Set env from branch
-        if: startsWith(github.ref, '/refs/heads/')
+        if: ${{ github.event.workflow_dispatch }}
         run: echo "RELEASE_VERSION=0-${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
       - name: build
         run: sudo make all -e VERSION=${{ env.RELEASE_VERSION }}
@@ -35,7 +35,7 @@ jobs:
           depends: 'python3, libpython3-stdlib'
           desc: 'Easy way to configure swap over zram'
       - name: release
-        if: startsWith(github.ref, '/refs/tags/')
+        if: ${{ ! github.event.workflow_dispatch }}
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ needs.build_deb.outputs.file_name }}.deb
