@@ -16,4 +16,4 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: build/zram-swap-${{ github.ref }.deb
+          files: build/zram-swap-${{ github.ref }}.deb
