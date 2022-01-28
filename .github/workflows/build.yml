@@ -1,0 +1,15 @@
+name: build
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        users: actions/checkout@v2
+      - name: unshallow
+        run: git fetch --prune --unshallow
+      - name: build
+        run: make all
