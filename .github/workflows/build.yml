@@ -33,7 +33,7 @@ jobs:
           depends: 'python3, libpython3-stdlib'
           desc: 'Easy way to configure swap over zram'
       - name: release
-        if: ${{ ! github.event.workflow_dispatch }}
+        if: ${{ startsWith(GITHUB_REF, "refs/tags/") }}
         uses: softprops/action-gh-release@v1
         with:
           files: ${{ needs.build_deb.outputs.file_name }}.deb
