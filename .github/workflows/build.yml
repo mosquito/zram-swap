@@ -2,8 +2,7 @@ name: build
 on:
   push:
     tags:
-      - '*'
-  workflow_dispatch:
+      - 'v*'
 jobs:
   build-deb:
     runs-on: ubuntu-latest
@@ -16,24 +15,19 @@ jobs:
         uses: actions/checkout@v2
       - name: unshallow
         run: git fetch --prune --unshallow
-      - name: Set version env
-        run: echo "VERSION=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
-      - name: Set release version env
-        run: echo "RELEASE_VERSION=${VERSION/[a-zA-Z]*/0-$VERSION}" >> $GITHUB_ENV
       - name: build
-        run: sudo make all -e VERSION=${{ env.RELEASE_VERSION }}
+        run: sudo make all
       - name: build_deb
         uses: jiro4989/build-deb-action@v2
         with:
           package: zram-swap
-          package_root: build/zram-swap-${{ env.RELEASE_VERSION }}
+          package_root: build/zram-swap-0.1
           maintainer: Dmitry Orlov <me@mosquito.su>
-          version: ${{ env.RELEASE_VERSION }}
+          version: ${{ github.ref }}
           arch: 'all'
           depends: 'python3, libpython3-stdlib'
           desc: 'Easy way to configure swap over zram'
       - name: release
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: softprops/action-gh-release@v1
+            uses: softprops/action-gh-release@v1
         with:
           files: ${{ needs.build_deb.outputs.file_name }}.deb
