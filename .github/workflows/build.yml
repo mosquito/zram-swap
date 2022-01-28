@@ -5,7 +5,7 @@ on:
       - 'v*'
 jobs:
   build-deb:
-    runs-on: ubuntu-latest
+    runs-on: cmd.cat/make/dpkg-deb
     steps:
       - name: checkout
         users: actions/checkout@v2
