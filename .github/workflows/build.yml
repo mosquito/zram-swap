@@ -19,7 +19,7 @@ jobs:
       - name: Set version env
         run: echo "VERSION=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
       - name: Set release version env
-        run: echo "RELEASE_VERSION=${VERSION/[a-zA-Z]*/0-$VERSION}"
+        run: echo "RELEASE_VERSION=${VERSION/[a-zA-Z]*/0-$VERSION}" >> $GITHUB_ENV
       - name: build
         run: sudo make all -e VERSION=${{ env.RELEASE_VERSION }}
       - name: build_deb
