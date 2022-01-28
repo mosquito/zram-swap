@@ -85,12 +85,12 @@ def get_awailable_memory():
             value = int(value)
             multiplier = units[unit[0].lower()]
             return value * multiplier
-    raise RuntimeError("Not able to guess avalilable memory")
+    raise RuntimeError("Not able to guess available memory")
 
 
 class ZRamDevice:
     SYS_PATH = Path("/sys/block")
-    DEV_PATH = Path(f"/dev")
+    DEV_PATH = Path("/dev")
 
     def __init__(self):
         self.device_num = None
