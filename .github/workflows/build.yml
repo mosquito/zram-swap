@@ -5,8 +5,12 @@ on:
       - '*'
 jobs:
   build-deb:
-    runs-on: cmd.cat/make/dpkg-deb
+    runs-on: ubuntu-latest
     steps:
+      - name: install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install dpkg-dev
       - name: checkout
         uses: actions/checkout@v2
       - name: unshallow
