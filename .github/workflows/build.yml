@@ -28,6 +28,6 @@ jobs:
           depends: 'python3, libpython3-stdlib'
           desc: 'Easy way to configure swap over zram'
       - name: release
-            uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v1
         with:
           files: ${{ needs.build_deb.outputs.file_name }}.deb
