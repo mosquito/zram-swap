@@ -1,0 +1,14 @@
+# Adding arguments to zram-swap
+ZRAM_SWAP_OPTS=""
+
+# Set maximal memory usage
+#ZRAM_SWAP_OPTS="--max-size 1G"
+
+# Set backend block device
+#ZRAM_SWAP_OPTS="--backing-dev /dev/ssd/swap"
+
+# Set algorithm
+#ZRAM_SWAP_OPTS="--algorithm lz4hc"
+
+# Set state file location
+#ZRAM_SWAP_OPTS="--state-file /var/lib/zram-swap.state"

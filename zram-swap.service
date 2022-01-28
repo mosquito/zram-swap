@@ -1,0 +1,12 @@
+                                                                                                      [Unit]
+Description = SWAP over zram device
+
+[Service]
+Type=one-shot
+EnvironmentFile=-/etc/default/zram-swap
+ExecStart=/usr/sbin/zram-swap $ZRAM_SWAP_OPTS
+User=root
+Group=root
+
+[Install]
+WantedBy=systemd-swap.target

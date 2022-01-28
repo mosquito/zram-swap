@@ -1,0 +1,254 @@
+#!/usr/bin/env python3
+import logging
+import shelve
+import shutil
+from argparse import ArgumentParser
+from functools import wraps
+from operator import mul
+from pathlib import Path
+from subprocess import check_call
+from time import sleep
+from typing import Callable, Any
+
+parser = ArgumentParser()
+parser.add_argument("--state-file", type=Path,
+                    default=Path("/run/zram-swap.state"))
+parser.add_argument("-S", "--max-size")
+parser.add_argument("-A", "--algorithm", default="lz4")
+parser.add_argument("-D", "--backing-dev")
+
+
+def retry(max_tries, *exceptions, sleep_time=1):
+    def decorator(func):
+        @wraps(func)
+        def wrap(*args, **kwargs):
+            last_exc = None
+            for _ in range(max_tries):
+                try:
+                    return func(*args, **kwargs)
+                except exceptions as e:
+                    last_exc = e
+                    sleep(sleep_time)
+
+            raise last_exc
+        return wrap
+    return decorator
+
+
+MODPROBE_BIN = shutil.which("modprobe")
+SWAPOFF_BIN = shutil.which("swapoff")
+SWAPON_BIN = shutil.which("swapon")
+MKSWAP_BIN = shutil.which("mkswap")
+
+
+def modprobe(name, **params):
+    cmd = [MODPROBE_BIN, str(name)]
+    for k, v in params.items():
+        cmd.append(f"{k}={v}")
+    return check_call(cmd)
+
+
+def get_boot_id():
+    with open("/proc/sys/kernel/random/boot_id") as fp:
+        return fp.readline().strip()
+
+
+def read_value_from_file(fname, converter: Callable[[str], Any] = int):
+    with open(fname, "r") as fp:
+        return converter(fp.read().strip())
+
+
+def write_line_to_file(fname, value):
+    with open(fname, "w") as fp:
+        return fp.write(f"{value}\n")
+
+
+def swapoff(dev_path):
+    with open("/proc/swaps") as fp:
+        fp.readline()
+        swaps = {line.split()[0] for line in fp}
+
+    if str(dev_path.resolve()) in swaps:
+        return check_call([SWAPOFF_BIN, str(dev_path)])
+
+
+def get_awailable_memory():
+    units = {
+        "b": 1, "k": 2 ** 10, "m": 2 ** 20,
+        "g": 2 ** 30, "t": 2 ** 40, "p": 2 ** 50
+    }
+    with open("/proc/meminfo", "r") as fp:
+        for line in fp:
+            if not line.startswith("MemTotal:"):
+                continue
+            _, value, unit = line.split()
+            value = int(value)
+            multiplier = units[unit[0].lower()]
+            return value * multiplier
+    raise RuntimeError("Not able to guess avalilable memory")
+
+
+class ZRamDevice:
+    SYS_PATH = Path("/sys/block")
+    DEV_PATH = Path(f"/dev")
+
+    def __init__(self):
+        self.device_num = None
+        self.device_name = None
+        self.sys_block_path = None
+        self.dev_path = None
+
+    def create(self):
+        self.device_num = read_value_from_file(
+            "/sys/class/zram-control/hot_add"
+        )
+        self.device_name = f"zram{self.device_num}"
+        self.sys_block_path = self.SYS_PATH / self.device_name
+        self.dev_path = self.DEV_PATH / self.device_name
+
+    def open(self, number):
+        self.device_num = int(number)
+        self.device_name = f"zram{self.device_num}"
+        self.sys_block_path = self.SYS_PATH / self.device_name
+        self.dev_path = self.DEV_PATH / self.device_name
+
+    @retry(10, OSError)
+    def remove(self):
+        if not self.dev_path.exists():
+            return
+
+        write_line_to_file("/sys/class/zram-control/hot_remove",
+                           self.device_num)
+
+        self.device_num = None
+        self.device_name = None
+        self.sys_block_path = None
+        self.dev_path = None
+
+    def reset(self):
+        write_line_to_file(self.sys_block_path / "reset", self.device_num)
+
+    @property
+    def disksize(self):
+        return read_value_from_file(self.sys_block_path / "disksize")
+
+    @disksize.setter
+    def disksize(self, value):
+        write_line_to_file(self.sys_block_path / "disksize", value)
+
+    @property
+    def mem_limit(self):
+        return read_value_from_file(self.sys_block_path / "mem_limit")
+
+    @mem_limit.setter
+    def mem_limit(self, value):
+        write_line_to_file(self.sys_block_path / "mem_limit", value)
+
+    @property
+    def comp_algorithm(self):
+        return read_value_from_file(
+            self.sys_block_path / "comp_algorithm", converter=str
+        )
+
+    @comp_algorithm.setter
+    def comp_algorithm(self, value):
+        write_line_to_file(self.sys_block_path / "comp_algorithm", value)
+
+    @property
+    def backing_dev(self):
+        def converter(value):
+            return Path(value) if value != 'none' else None
+
+        return read_value_from_file(
+            self.sys_block_path / "backing_dev",
+            converter=converter
+        )
+
+    @backing_dev.setter
+    def backing_dev(self, value):
+        write_line_to_file(self.sys_block_path / "backing_dev", value)
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    log = logging.getLogger()
+
+    arguments = parser.parse_args()
+
+    if not arguments.max_size:
+        arguments.max_size = int(get_awailable_memory() / 2)
+
+    device_size = arguments.max_size
+    if arguments.backing_dev:
+        dev_name = Path(arguments.backing_dev).resolve().relative_to("/dev")
+        device_size = mul(
+            read_value_from_file(
+                f"/sys/class/block/{dev_name}/size"
+            ),
+            read_value_from_file(
+                f"/sys/class/block/{dev_name}/queue/hw_sector_size"
+            )
+        )
+
+    log.info("Loading modules")
+    modprobe("zram", num_devices=0)
+    modprobe(f"{arguments.algorithm}_compress")
+
+    boot_id = get_boot_id()
+    state = shelve.open(str(arguments.state_file.resolve()))
+
+    if state.get('boot_id') == boot_id:
+        log.info("Device already configured.")
+        zram = ZRamDevice()
+        zram.open(state["device_number"])
+
+        log.info("Remove device from SWAP")
+        swapoff(zram.dev_path)
+
+        log.info("Remove device %s", zram.dev_path)
+        zram.remove()
+
+        log.info("Remove device from state")
+        del state["device_number"]
+        del state["boot_id"]
+
+    zram = ZRamDevice()
+    zram.create()
+    log.info("Device %s created", zram.dev_path)
+    try:
+        log.info(
+            "Setting %s as compression algorithm for %s",
+            arguments.algorithm, zram.dev_path
+        )
+        zram.comp_algorithm = arguments.algorithm
+
+        log.info(
+            "Setting disk size to %s for %s",
+            device_size, zram.dev_path
+        )
+        zram.disksize = device_size
+
+        log.info(
+            "Setting memory limit to %s for %s",
+            arguments.max_size, zram.dev_path
+        )
+        zram.mem_limit = arguments.max_size
+
+        log.info("Formatting %s as swap device", zram.dev_path)
+        check_call([MKSWAP_BIN, "-f", str(zram.dev_path)])
+
+        log.info("Loading %s as swap device", zram.dev_path)
+        check_call([SWAPON_BIN, str(zram.dev_path)])
+
+        log.info("Storing state to %s", arguments.state_file.resolve())
+        state["device_number"] = zram.device_num
+        state["boot_id"] = boot_id
+    except Exception:
+        zram.remove()
+        raise
+
+
+if __name__ == "__main__":
+    main()
+
+# vi: syntax=python expandtab softtabstop=4 shiftwidth=4 tabstop=4
