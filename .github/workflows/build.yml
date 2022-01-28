@@ -8,7 +8,7 @@ jobs:
     runs-on: cmd.cat/make/dpkg-deb
     steps:
       - name: checkout
-        users: actions/checkout@v2
+        uses: actions/checkout@v2
       - name: unshallow
         run: git fetch --prune --unshallow
       - name: build
