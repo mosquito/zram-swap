@@ -14,19 +14,9 @@ jobs:
       - name: unshallow
         run: git fetch --prune --unshallow
       - name: build
-        run: sudo make all
-      - name: build_deb
-        uses: jiro4989/build-deb-action@v2
-        with:
-          package: zram-swap
-          package_root: build/zram-swap-0.1
-          maintainer: Dmitry Orlov <me@mosquito.su>
-          version: ${{ github.ref }}
-          arch: 'all'
-          depends: 'python3, libpython3-stdlib'
-          desc: 'Easy way to configure swap over zram'
+        run: sudo make all -e VERSION=${{ github.ref#refs/tags/v* }}
       - name: release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: '*.deb'
+          files: 'build/**/*.deb'
