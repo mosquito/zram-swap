@@ -7,7 +7,6 @@ build/zram-swap-${VERSION}.deb: \
 		${BUILD_DIR}/sbin/zram-swap \
 		${BUILD_DIR}/usr/lib/systemd/system/zram-swap.service \
 		${BUILD_DIR}/etc/default/zram-swap
-	dpkg-deb --build ${BUILD_DIR}
 
 clean:
 	rm -fr build
