@@ -8,9 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install dpkg-dev
+        run: sudo apt-get update && sudo apt-get install dpkg-dev
       - name: checkout
         uses: actions/checkout@v2
       - name: unshallow
@@ -29,5 +27,6 @@ jobs:
           desc: 'Easy way to configure swap over zram'
       - name: release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
         with:
-          files: ${{ needs.build_deb.outputs.file_name }}.deb
+          files: '*.deb'
