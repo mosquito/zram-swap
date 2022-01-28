@@ -2,7 +2,7 @@ name: build
 on:
   push:
     tags:
-      - 'v*'
+      - '*'
 jobs:
   build-deb:
     runs-on: cmd.cat/make/dpkg-deb
@@ -12,4 +12,8 @@ jobs:
       - name: unshallow
         run: git fetch --prune --unshallow
       - name: build
-        run: make all
+        run: make all -e VERSION=${{ github.ref }}
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: build/zram-swap-${{ github.ref }.deb
