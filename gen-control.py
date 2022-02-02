@@ -6,7 +6,7 @@ from string import Template
 template = Template("""
 Package: zram-swap
 Version: $version
-Depends: python3, python3-stdlib
+Depends: python3, libpython3-stdlib
 Section: custom
 Priority: optional
 Architecture: all

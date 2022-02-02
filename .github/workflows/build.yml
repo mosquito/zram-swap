@@ -1,0 +1,23 @@
+name: build
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install dependencies
+        run: sudo apt-get update && sudo apt-get install dpkg-dev
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: unshallow
+        run: git fetch --prune --unshallow
+      - name: build
+        run: sudo make all -e VERSION=$(RELEASE=$(git describe --tags) && echo "${RELEASE#v*}")
+      - name: release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: 'build/**/*.deb'
