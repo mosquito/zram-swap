@@ -1,5 +1,7 @@
-                                                                                                      [Unit]
+[Unit]
 Description = SWAP over zram device
+Before=multi-user.target
+After=local-fs.target
 
 [Service]
 Type=one-shot
