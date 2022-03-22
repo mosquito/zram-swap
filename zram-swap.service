@@ -4,7 +4,7 @@ Before=multi-user.target
 After=local-fs.target
 
 [Service]
-Type=one-shot
+Type=oneshot
 EnvironmentFile=-/etc/default/zram-swap
 ExecStart=/usr/sbin/zram-swap $ZRAM_SWAP_OPTS
 User=root
