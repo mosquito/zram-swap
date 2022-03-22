@@ -5,15 +5,21 @@ all: build/zram-swap-${VERSION}.deb
 
 build/zram-swap-${VERSION}.deb: \
 		${BUILD_DIR}/DEBIAN/control \
+		${BUILD_DIR}/DEBIAN/conffiles \
 		${BUILD_DIR}/sbin/zram-swap \
 		${BUILD_DIR}/usr/lib/systemd/system/zram-swap.service \
 		${BUILD_DIR}/usr/lib/systemd/system-preset/99-zram-swap.preset \
 		${BUILD_DIR}/etc/default/zram-swap
 	dpkg-deb --build ${BUILD_DIR}
 
-${BUILD_DIR}/DEBIAN/control: ${BUILD_DIR}
-	mkdir -p DEBIAN ${BUILD_DIR}/DEBIAN
+${BUILD_DIR}/DEBIAN: ${BUILD_DIR}
+	mkdir -p ${BUILD_DIR}/DEBIAN
+
+${BUILD_DIR}/DEBIAN/control: ${BUILD_DIR}/DEBIAN
 	VERSION=${VERSION} python3 gen-control.py > ${BUILD_DIR}/DEBIAN/control
+
+${BUILD_DIR}/DEBIAN/conffiles: ${BUILD_DIR}/DEBIAN
+	echo "/etc/default/zram-swap" > ${BUILD_DIR}/DEBIAN/conffiles
 
 clean:
 	rm -fr build
