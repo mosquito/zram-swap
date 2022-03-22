@@ -20,6 +20,7 @@ files = (
     Path("zram-swap"),
     Path("zram-swap.default"),
     Path("zram-swap.service"),
+    Path("zram-swap.preset"),
 )
 
 
