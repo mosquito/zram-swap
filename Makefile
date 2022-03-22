@@ -28,6 +28,10 @@ ${BUILD_DIR}/usr/lib/systemd/system/zram-swap.service: ${BUILD_DIR}
 	mkdir -p ${BUILD_DIR}/usr/lib/systemd/system
 	install -m 0644 -o root -v zram-swap.service ${BUILD_DIR}/usr/lib/systemd/system/zram-swap.service
 
+${BUILD_DIR}/usr/lib/systemd/system-preset/99-zram-swap.preset: ${BUILD_DIR}
+	mkdir -p ${BUILD_DIR}/usr/lib/systemd/system-preset
+	install -m 0644 -o root -v zram-swap.preset ${BUILD_DIR}/usr/lib/systemd/system-preset/99-zram-swap.preset
+
 ${BUILD_DIR}/etc/default/zram-swap: ${BUILD_DIR}
 	mkdir -p ${BUILD_DIR}/etc/default
 	install -m 0644 -o root -v zram-swap.default ${BUILD_DIR}/etc/default/zram-swap
